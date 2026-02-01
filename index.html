@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Privacy Policy Analyzer</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.5; margin: 2rem; }
+    textarea { width: 100%; height: 200px; }
+    button { margin-top: 1rem; padding: 0.5rem 1rem; }
+    #results { margin-top: 2rem; }
+    .sentence { margin-bottom: 1rem; }
+    .categories { font-weight: bold; color: #333; }
+    .recommendations { margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Privacy Policy Analyzer</h1>
+  <p>Paste a privacy policy below and click “Analyze” to flag potential data practices and see recommended privacy settings adjustments.</p>
+  <textarea id="policyInput" placeholder="Paste privacy policy text here..."></textarea>
+  <br>
+  <button id="analyzeButton">Analyze</button>
+  <div id="results"></div>
+
+  <script>
+  // Categories and keywords, lower-case
+  const categories = {
+    "Data Sharing": ["share","third party","third-party","partner","vendor","affiliate","disclose","provide"],
+    "Data Selling": ["sell","sale","monetize","commercialize"],
+    "Advertising": ["advertising","advertisement","advertiser","marketing","promotional"],
+    "Analytics & Tracking": ["analytics","tracking","cookie","beacon","pixel","sdk"],
+    "Personal Information": ["personal information","personal data","pii","personally identifiable","sensitive information"],
+    "Location": ["location","geolocation","gps"],
+    "Retention": ["retain","retention","store","storage","keep","period","duration"],
+    "Security": ["security","protect","encryption","breach"]
+  };
+
+  function splitSentences(text) {
+    const cleaned = text.trim().replace(/\s+/g, " ");
+    return cleaned.split(/(?<=[.!?])\s+(?=[A-Z])/).map(s => s.trim()).filter(s => s.length > 0);
+  }
+
+  function analyzePolicy(text, categories) {
+    const sentences = splitSentences(text);
+    const results = [];
+    for (const sentence of sentences) {
+      const lowered = sentence.toLowerCase();
+      const matched = Object.keys(categories).filter(cat =>
+        categories[cat].some(kw => lowered.includes(kw))
+      );
+      if (matched.length > 0) {
+        results.push({ sentence, matched });
+      }
+    }
+    return results;
+  }
+
+  function getRecommendations(matchedCategories) {
+    const recMap = {
+      "Data Sharing": [
+        "Review the app's settings for data sharing or personalization. Opt out of sharing personal data with third‑party partners whenever possible.",
+        "Disable permissions for unnecessary sensors or data (e.g., contacts, photos) if they are not needed for the app's core functionality."
+      ],
+      "Data Selling": [
+        "Check whether the app offers an option to opt out of the sale of personal information. If so, enable it.",
+        "Consider contacting the app developer or using a different service if the policy allows selling your data."
+      ],
+      "Advertising": [
+        "Limit ad tracking or disable personalized ads in your device settings.",
+        "Within the app, look for advertising preferences and opt out of targeted advertising."
+      ],
+      "Analytics & Tracking": [
+        "Disable analytics or usage tracking in the app's settings if available.",
+        "Clear cookies and app data periodically to minimize tracking."
+      ],
+      "Personal Information": [
+        "Provide only the minimum personal information required for the app to function.",
+        "Regularly review and update your privacy settings to restrict access to sensitive data."
+      ],
+      "Location": [
+        "Set location permissions to 'While Using the App' or 'Never' unless the app truly needs continuous location access.",
+        "Disable precise location access if approximate location suffices for the app's functionality."
+      ],
+      "Retention": [
+        "If the policy indicates long data retention, consider periodically deleting your account or data within the app.",
+        "Request account deletion or data export when you stop using the service."
+      ],
+      "Security": [
+        "Enable any available security features such as two‑factor authentication (2FA) or passcodes within the app.",
+        "Keep your device and apps updated to ensure you have the latest security patches."
+      ]
+    };
+    const recs = [];
+    for (const category of matchedCategories) {
+      if (recMap[category]) {
+        recs.push(...recMap[category]);
+      }
+    }
+    // Deduplicate
+    return [...new Set(recs)];
+  }
+
+  document.getElementById('analyzeButton').addEventListener('click', () => {
+    const text = document.getElementById('policyInput').value;
+    const results = analyzePolicy(text, categories);
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = '';
+    if (results.length === 0) {
+      resultsDiv.textContent = 'No potentially sensitive practices detected.';
+      return;
+    }
+    const uniqueCategories = [];
+    results.forEach(res => {
+      const p = document.createElement('p');
+      p.className = 'sentence';
+      const cats = res.matched.join(', ');
+      p.innerHTML = `<span class="categories">${cats}:</span> ${res.sentence}`;
+      resultsDiv.appendChild(p);
+      res.matched.forEach(cat => {
+        if (!uniqueCategories.includes(cat)) uniqueCategories.push(cat);
+      });
+    });
+    const recs = getRecommendations(uniqueCategories);
+    if (recs.length > 0) {
+      const recHeader = document.createElement('h2');
+      recHeader.textContent = 'Recommended actions';
+      resultsDiv.appendChild(recHeader);
+      const ul = document.createElement('ul');
+      recs.forEach(r => {
+        const li = document.createElement('li');
+        li.textContent = r;
+        ul.appendChild(li);
+      });
+      resultsDiv.appendChild(ul);
+    }
+  });
+  </script>
+</body>
+</html>
